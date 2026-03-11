@@ -15,17 +15,18 @@ export const initializeFaceMesh = async () => {
     // Load MediaPipe library
     await loadMediaPipeLibrary();
     
-    const vision = window.MediaPipe.tasks.vision;
+    // Access from window
+    const vision = window.Vision;
     
     if (!vision) {
-      throw new Error('MediaPipe vision API not available');
+      throw new Error('MediaPipe Vision API not available');
     }
     
     const FilesetResolver = vision.FilesetResolver;
     const FaceMesh = vision.FaceMesh;
     
     if (!FilesetResolver || !FaceMesh) {
-      throw new Error('FaceMesh not available');
+      throw new Error('FaceMesh classes not found');
     }
     
     const wasmFilesFromCDN = await FilesetResolver.forVisionTasks(
@@ -46,44 +47,43 @@ export const initializeFaceMesh = async () => {
 };
 
 /**
- * Load MediaPipe library from CDN with retry logic
+ * Load MediaPipe library using UMD bundle
  */
 async function loadMediaPipeLibrary() {
   return new Promise((resolve, reject) => {
     // Check if already loaded
-    if (window.MediaPipe && window.MediaPipe.tasks && window.MediaPipe.tasks.vision) {
-      console.log('MediaPipe already loaded');
+    if (window.Vision) {
+      console.log('MediaPipe Vision already loaded');
       resolve();
       return;
     }
     
-    console.log('Loading MediaPipe from CDN...');
+    console.log('Loading MediaPipe Vision UMD bundle...');
     
     const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/vision_bundle.mjs';
-    script.type = 'module';
+    script.src = 'https://unpkg.com/@mediapipe/tasks-vision@0.10.8/dist/vision.js';
     script.async = true;
     
     const timeout = setTimeout(() => {
       reject(new Error('MediaPipe library loading timeout'));
-    }, 15000); // 15 second timeout
+    }, 20000); // 20 second timeout
     
     script.onload = () => {
       clearTimeout(timeout);
-      // Wait a bit for module to be ready
       setTimeout(() => {
-        if (window.MediaPipe) {
-          console.log('MediaPipe loaded successfully');
+        if (window.Vision) {
+          console.log('MediaPipe Vision loaded successfully');
           resolve();
         } else {
-          reject(new Error('MediaPipe object not found after loading'));
+          reject(new Error('Vision object not found after loading'));
         }
-      }, 1000);
+      }, 500);
     };
     
-    script.onerror = () => {
+    script.onerror = (error) => {
       clearTimeout(timeout);
-      reject(new Error('Failed to load MediaPipe library'));
+      console.error('Script load error:', error);
+      reject(new Error('Failed to load MediaPipe Vision library'));
     };
     
     document.head.appendChild(script);
