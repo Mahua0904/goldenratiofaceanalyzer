@@ -14,12 +14,24 @@ export const initializeFaceMesh = async () => {
   try {
     const vision = await import('@mediapipe/tasks-vision');
     
+    if (!vision.FilesetResolver) {
+      throw new Error('FilesetResolver not available in vision module');
+    }
+    
     const FilesetResolver = vision.FilesetResolver;
     const FaceMesh = vision.FaceMesh;
     
+    if (!FaceMesh) {
+      throw new Error('FaceMesh not available in vision module');
+    }
+    
     const wasmFilesFromCDN = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm'
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
     );
+    
+    if (!wasmFilesFromCDN) {
+      throw new Error('Failed to load WASM files from CDN');
+    }
     
     faceMesh = await FaceMesh.createFromOptions(wasmFilesFromCDN, {
       runningMode: 'VIDEO',
@@ -29,7 +41,7 @@ export const initializeFaceMesh = async () => {
     return faceMesh;
   } catch (error) {
     console.error('Error initializing FaceMesh:', error);
-    throw error;
+    throw new Error(`Face detection initialization failed: ${error.message}`);
   }
 };
 
@@ -38,18 +50,31 @@ export const initializeFaceMesh = async () => {
  */
 export const startCamera = async () => {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
+    // First try with ideal width/height (mobile will use what it can)
+    const constraints = {
       video: {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: 1280, min: 320 },
+        height: { ideal: 720, min: 240 },
         facingMode: 'user',
       },
       audio: false,
-    });
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
     return stream;
   } catch (error) {
     console.error('Error accessing camera:', error);
-    throw new Error('Camera access denied or unavailable');
+    
+    // Fallback: try with simpler constraints
+    try {
+      const fallbackStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' },
+        audio: false,
+      });
+      return fallbackStream;
+    } catch (fallbackError) {
+      throw new Error('Camera access denied. Please grant camera permissions and try again.');
+    }
   }
 };
 
