@@ -12,21 +12,20 @@ let canvasElement;
  */
 export const initializeFaceMesh = async () => {
   try {
-    // Load MediaPipe vision library from CDN
-    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8');
+    // Load MediaPipe library
+    await loadMediaPipeLibrary();
     
-    // Access the global MediaPipe object
-    const vision = window.MediaPipe;
+    const vision = window.MediaPipe.tasks.vision;
     
-    if (!vision || !vision.tasks || !vision.tasks.vision) {
-      throw new Error('MediaPipe library failed to load');
+    if (!vision) {
+      throw new Error('MediaPipe vision API not available');
     }
     
-    const FilesetResolver = vision.tasks.vision.FilesetResolver;
-    const FaceMesh = vision.tasks.vision.FaceMesh;
+    const FilesetResolver = vision.FilesetResolver;
+    const FaceMesh = vision.FaceMesh;
     
     if (!FilesetResolver || !FaceMesh) {
-      throw new Error('Required MediaPipe classes not found');
+      throw new Error('FaceMesh not available');
     }
     
     const wasmFilesFromCDN = await FilesetResolver.forVisionTasks(
@@ -38,32 +37,55 @@ export const initializeFaceMesh = async () => {
       numFaces: 1,
     });
     
+    console.log('FaceMesh initialized successfully');
     return faceMesh;
   } catch (error) {
     console.error('Error initializing FaceMesh:', error);
-    throw new Error(`Face detection initialization failed: ${error.message}`);
+    throw new Error(`Face detection failed: ${error.message}`);
   }
 };
 
 /**
- * Load script from CDN
+ * Load MediaPipe library from CDN with retry logic
  */
-function loadScript(src) {
+async function loadMediaPipeLibrary() {
   return new Promise((resolve, reject) => {
     // Check if already loaded
     if (window.MediaPipe && window.MediaPipe.tasks && window.MediaPipe.tasks.vision) {
+      console.log('MediaPipe already loaded');
       resolve();
       return;
     }
     
+    console.log('Loading MediaPipe from CDN...');
+    
     const script = document.createElement('script');
-    script.src = src;
+    script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/vision_bundle.mjs';
+    script.type = 'module';
     script.async = true;
+    
+    const timeout = setTimeout(() => {
+      reject(new Error('MediaPipe library loading timeout'));
+    }, 15000); // 15 second timeout
+    
     script.onload = () => {
-      // Wait a bit for the library to be ready
-      setTimeout(resolve, 500);
+      clearTimeout(timeout);
+      // Wait a bit for module to be ready
+      setTimeout(() => {
+        if (window.MediaPipe) {
+          console.log('MediaPipe loaded successfully');
+          resolve();
+        } else {
+          reject(new Error('MediaPipe object not found after loading'));
+        }
+      }, 1000);
     };
-    script.onerror = () => reject(new Error(`Failed to load script from ${src}`));
+    
+    script.onerror = () => {
+      clearTimeout(timeout);
+      reject(new Error('Failed to load MediaPipe library'));
+    };
+    
     document.head.appendChild(script);
   });
 }
