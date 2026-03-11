@@ -3,10 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main
+      - faceAnalyzer
   pull_request:
     branches:
-      - main
+      - faceAnalyzer
 
 jobs:
   deploy:
