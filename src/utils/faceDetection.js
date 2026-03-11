@@ -12,26 +12,26 @@ let canvasElement;
  */
 export const initializeFaceMesh = async () => {
   try {
-    const vision = await import('@mediapipe/tasks-vision');
+    // Load MediaPipe vision library from CDN
+    await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8');
     
-    if (!vision.FilesetResolver) {
-      throw new Error('FilesetResolver not available in vision module');
+    // Access the global MediaPipe object
+    const vision = window.MediaPipe;
+    
+    if (!vision || !vision.tasks || !vision.tasks.vision) {
+      throw new Error('MediaPipe library failed to load');
     }
     
-    const FilesetResolver = vision.FilesetResolver;
-    const FaceMesh = vision.FaceMesh;
+    const FilesetResolver = vision.tasks.vision.FilesetResolver;
+    const FaceMesh = vision.tasks.vision.FaceMesh;
     
-    if (!FaceMesh) {
-      throw new Error('FaceMesh not available in vision module');
+    if (!FilesetResolver || !FaceMesh) {
+      throw new Error('Required MediaPipe classes not found');
     }
     
     const wasmFilesFromCDN = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm'
     );
-    
-    if (!wasmFilesFromCDN) {
-      throw new Error('Failed to load WASM files from CDN');
-    }
     
     faceMesh = await FaceMesh.createFromOptions(wasmFilesFromCDN, {
       runningMode: 'VIDEO',
@@ -44,6 +44,29 @@ export const initializeFaceMesh = async () => {
     throw new Error(`Face detection initialization failed: ${error.message}`);
   }
 };
+
+/**
+ * Load script from CDN
+ */
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    // Check if already loaded
+    if (window.MediaPipe && window.MediaPipe.tasks && window.MediaPipe.tasks.vision) {
+      resolve();
+      return;
+    }
+    
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => {
+      // Wait a bit for the library to be ready
+      setTimeout(resolve, 500);
+    };
+    script.onerror = () => reject(new Error(`Failed to load script from ${src}`));
+    document.head.appendChild(script);
+  });
+}
 
 /**
  * Start camera and get video stream
