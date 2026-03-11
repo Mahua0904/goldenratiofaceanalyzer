@@ -12,28 +12,18 @@ let canvasElement;
  */
 export const initializeFaceMesh = async () => {
   try {
-    // Load MediaPipe library
-    await loadMediaPipeLibrary();
+    // Dynamically import MediaPipe from esm CDN
+    const Vision = await import('https://esm.sh/@mediapipe/tasks-vision@0.10.8');
     
-    // Access from window
-    const vision = window.Vision;
-    
-    if (!vision) {
-      throw new Error('MediaPipe Vision API not available');
+    if (!Vision.FilesetResolver || !Vision.FaceMesh) {
+      throw new Error('FaceMesh classes not found in Vision module');
     }
     
-    const FilesetResolver = vision.FilesetResolver;
-    const FaceMesh = vision.FaceMesh;
-    
-    if (!FilesetResolver || !FaceMesh) {
-      throw new Error('FaceMesh classes not found');
-    }
-    
-    const wasmFilesFromCDN = await FilesetResolver.forVisionTasks(
+    const wasmFilesFromCDN = await Vision.FilesetResolver.forVisionTasks(
       'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm'
     );
     
-    faceMesh = await FaceMesh.createFromOptions(wasmFilesFromCDN, {
+    faceMesh = await Vision.FaceMesh.createFromOptions(wasmFilesFromCDN, {
       runningMode: 'VIDEO',
       numFaces: 1,
     });
@@ -45,50 +35,6 @@ export const initializeFaceMesh = async () => {
     throw new Error(`Face detection failed: ${error.message}`);
   }
 };
-
-/**
- * Load MediaPipe library using UMD bundle
- */
-async function loadMediaPipeLibrary() {
-  return new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (window.Vision) {
-      console.log('MediaPipe Vision already loaded');
-      resolve();
-      return;
-    }
-    
-    console.log('Loading MediaPipe Vision UMD bundle...');
-    
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@mediapipe/tasks-vision@0.10.8/dist/vision.js';
-    script.async = true;
-    
-    const timeout = setTimeout(() => {
-      reject(new Error('MediaPipe library loading timeout'));
-    }, 20000); // 20 second timeout
-    
-    script.onload = () => {
-      clearTimeout(timeout);
-      setTimeout(() => {
-        if (window.Vision) {
-          console.log('MediaPipe Vision loaded successfully');
-          resolve();
-        } else {
-          reject(new Error('Vision object not found after loading'));
-        }
-      }, 500);
-    };
-    
-    script.onerror = (error) => {
-      clearTimeout(timeout);
-      console.error('Script load error:', error);
-      reject(new Error('Failed to load MediaPipe Vision library'));
-    };
-    
-    document.head.appendChild(script);
-  });
-}
 
 /**
  * Start camera and get video stream
