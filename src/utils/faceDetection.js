@@ -1,38 +1,51 @@
 /**
- * Face Detection Module using MediaPipe FaceMesh
+ * Face Detection Module using MediaPipe FaceLandmarker
  * Handles webcam access and facial landmark detection
  */
 
-let faceMesh;
+let faceLandmarker;
 let camera;
 let canvasElement;
 
 /**
- * Initialize MediaPipe FaceMesh
+ * Initialize MediaPipe FaceLandmarker
  */
 export const initializeFaceMesh = async () => {
   try {
-    // Dynamically import MediaPipe from esm CDN
-    const Vision = await import('https://esm.sh/@mediapipe/tasks-vision@0.10.8');
+    // Import from the MediaPipe vision module
+    const vision = await import('@mediapipe/tasks-vision');
     
-    if (!Vision.FilesetResolver || !Vision.FaceMesh) {
-      throw new Error('FaceMesh classes not found in Vision module');
+    const FilesetResolver = vision.FilesetResolver;
+    const FaceLandmarker = vision.FaceLandmarker;
+    
+    if (!FilesetResolver) {
+      throw new Error('FilesetResolver not found');
     }
     
-    const wasmFilesFromCDN = await Vision.FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.8/wasm'
+    if (!FaceLandmarker) {
+      throw new Error('FaceLandmarker not found');
+    }
+    
+    const wasmFilesFromCDN = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm'
     );
     
-    faceMesh = await Vision.FaceMesh.createFromOptions(wasmFilesFromCDN, {
+    faceLandmarker = await FaceLandmarker.createFromOptions(wasmFilesFromCDN, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+        delegate: 'GPU'
+      },
       runningMode: 'VIDEO',
       numFaces: 1,
+      outputFaceExpressions: false,
+      outputHeadRotation: true
     });
     
-    console.log('FaceMesh initialized successfully');
-    return faceMesh;
+    console.log('FaceLandmarker initialized successfully');
+    return faceLandmarker;
   } catch (error) {
-    console.error('Error initializing FaceMesh:', error);
-    throw new Error(`Face detection failed: ${error.message}`);
+    console.error('Error initializing FaceLandmarker:', error);
+    throw error;
   }
 };
 
@@ -73,13 +86,13 @@ export const startCamera = async () => {
  * Detect faces in video frame
  */
 export const detectFaces = async (videoElement) => {
-  if (!faceMesh) {
-    console.error('FaceMesh not initialized');
+  if (!faceLandmarker) {
+    console.error('FaceLandmarker not initialized');
     return null;
   }
 
   try {
-    const results = await faceMesh.detectForVideo(videoElement, Date.now());
+    const results = await faceLandmarker.detectForVideo(videoElement, Date.now());
     return results;
   } catch (error) {
     console.error('Error detecting faces:', error);
