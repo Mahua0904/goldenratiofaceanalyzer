@@ -64,10 +64,20 @@ const App = () => {
       
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
-        // Wait for video to be ready
-        await new Promise((resolve) => {
-          videoRef.current.onloadedmetadata = resolve;
-        });
+        // Wait for video to be ready with timeout
+        await Promise.race([
+          new Promise((resolve) => {
+            videoRef.current.onloadedmetadata = resolve;
+          }),
+          new Promise((resolve) => setTimeout(resolve, 3000)), // 3 second timeout
+        ]);
+        
+        // Explicitly play video for mobile compatibility
+        try {
+          await videoRef.current.play();
+        } catch (playErr) {
+          console.warn('Video play error (may be normal on some mobile):', playErr);
+        }
       }
       
       setIsDetecting(true);
@@ -133,24 +143,24 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-2 md:p-4">
+      <div className="w-full mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="text-4xl">✨</div>
-            <h1 className="text-4xl md:text-5xl font-bold gradient-text">
+        <div className="mb-4 px-2 md:px-4">
+          <div className="flex items-center gap-2 md:gap-3 mb-2">
+            <div className="text-3xl md:text-4xl">✨</div>
+            <h1 className="text-2xl md:text-4xl font-bold gradient-text">
               Facial Beauty Analyzer
             </h1>
           </div>
-          <p className="text-gray-300 text-lg">
+          <p className="text-gray-300 text-sm md:text-base">
             Analyze your facial proportions using the Golden Ratio (φ ≈ 1.618)
           </p>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6">
+          <div className="mb-4 px-2 md:px-4">
             <Alert
               type={error.type}
               title={error.title}
@@ -161,11 +171,11 @@ const App = () => {
         )}
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Camera Feed - 2 columns on large screens */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="glass-dark p-4 rounded-xl border border-white/10">
-              <div className="aspect-video bg-black/50 rounded-lg overflow-hidden">
+        <div className="space-y-4 px-2 md:px-4">
+          {/* Camera Feed - Full Width */}
+          <div className="space-y-4">
+            <div className="glass-dark p-3 md:p-4 rounded-xl border border-white/10">
+              <div className="w-full bg-black rounded-lg overflow-hidden" style={{height: '70vh', maxHeight: 'calc(100vh - 300px)'}}>
                 <Camera
                   videoRef={videoRef}
                   canvasRef={canvasRef}
@@ -178,7 +188,7 @@ const App = () => {
             </div>
 
             {/* Camera Controls */}
-            <div className="glass-dark p-4 rounded-xl border border-white/10">
+            <div className="glass-dark p-3 md:p-4 rounded-xl border border-white/10">
               <div className="space-y-3">
                 <div className="flex gap-3">
                   {!isDetecting ? (
@@ -226,14 +236,14 @@ const App = () => {
 
             {/* Info Cards */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="glass-dark p-3 rounded-lg text-center border border-white/10">
-                <p className="text-sm text-gray-400">Golden Ratio</p>
-                <p className="text-2xl font-bold text-purple-300 mt-1">1.618</p>
-                <p className="text-xs text-gray-500 mt-1">φ (Phi)</p>
-              </div>
-              <div className="glass-dark p-3 rounded-lg text-center border border-white/10">
-                <p className="text-sm text-gray-400">Detection Status</p>
-                <p className={`text-2xl font-bold mt-1 ${isDetecting ? 'text-green-400' : 'text-gray-400'}`}>
+            <div className="glass-dark p-2 md:p-3 rounded-lg text-center border border-white/10">
+              <p className="text-xs md:text-sm text-gray-400">Golden Ratio</p>
+              <p className="text-lg md:text-2xl font-bold text-purple-300 mt-1">1.618</p>
+              <p className="text-xs text-gray-500 mt-1">φ (Phi)</p>
+            </div>
+            <div className="glass-dark p-2 md:p-3 rounded-lg text-center border border-white/10">
+              <p className="text-xs md:text-sm text-gray-400">Detection Status</p>
+              <p className={`text-lg md:text-2xl font-bold mt-1 ${isDetecting ? 'text-green-400' : 'text-gray-400'}`}>
                   {isDetecting ? '●' : '○'}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">{isDetecting ? 'Active' : 'Inactive'}</p>
@@ -241,9 +251,9 @@ const App = () => {
             </div>
           </div>
 
-          {/* Results Panel - 1 column on large screens */}
-          <div className="glass-dark p-6 rounded-xl border border-white/10 h-fit lg:sticky lg:top-8">
-            <h2 className="text-2xl font-bold text-purple-300 mb-6">Analysis Results</h2>
+          {/* Results Panel - Below Camera */}
+          <div className="glass-dark p-4 md:p-6 rounded-xl border border-white/10">
+            <h2 className="text-xl md:text-2xl font-bold text-purple-300 mb-4">Analysis Results</h2>
             <ResultsPanel 
               analysisData={analysisData}
               isLoading={isDetecting && !analysisData}
@@ -252,7 +262,7 @@ const App = () => {
         </div>
 
         {/* Footer Information */}
-        <div className="mt-12 pt-8 border-t border-white/10">
+        <div className="mt-8 pt-6 px-2 md:px-4 border-t border-white/10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="glass-dark p-4 rounded-lg border border-white/10">
               <h3 className="font-semibold text-purple-300 mb-2">🔒 Privacy</h3>

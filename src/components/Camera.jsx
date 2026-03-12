@@ -13,26 +13,43 @@ const Camera = ({
   showMeasurements = true
 }) => {
   const animationId = useRef(null);
-  const [canvasSize, setCanvasSize] = useState({ width: 1280, height: 720 });
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   const processFrame = async () => {
-    if (videoRef.current && canvasRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+    if (videoRef.current && canvasRef.current) {
+      // Check if video is actually ready
+      if (videoRef.current.readyState < videoRef.current.HAVE_CURRENT_DATA) {
+        animationId.current = requestAnimationFrame(processFrame);
+        return;
+      }
+
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
       
-      // Ensure canvas matches video dimensions
-      if (canvas.width !== videoRef.current.videoWidth || canvas.height !== videoRef.current.videoHeight) {
-        canvas.width = videoRef.current.videoWidth;
-        canvas.height = videoRef.current.videoHeight;
-        setCanvasSize({ width: canvas.width, height: canvas.height });
-      }
+      // Get actual video dimensions
+      const videoWidth = videoRef.current.videoWidth;
+      const videoHeight = videoRef.current.videoHeight;
 
-      // Draw video frame
-      ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+      // Only proceed if video has valid dimensions
+      if (videoWidth > 0 && videoHeight > 0) {
+        // Ensure canvas matches video dimensions
+        if (canvas.width !== videoWidth || canvas.height !== videoHeight) {
+          canvas.width = videoWidth;
+          canvas.height = videoHeight;
+          setCanvasSize({ width: videoWidth, height: videoHeight });
+        }
 
-      // Notify parent component for face detection processing
-      if (isDetecting && onFrameReady) {
-        await onFrameReady(videoRef.current, ctx);
+        try {
+          // Draw video frame
+          ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+
+          // Notify parent component for face detection processing
+          if (isDetecting && onFrameReady) {
+            await onFrameReady(videoRef.current, ctx);
+          }
+        } catch (err) {
+          console.error('Frame processing error:', err);
+        }
       }
     }
 
@@ -59,6 +76,7 @@ const Camera = ({
         playsInline
         autoPlay
         muted
+        disablePictureInPicture
       />
       <canvas
         ref={canvasRef}

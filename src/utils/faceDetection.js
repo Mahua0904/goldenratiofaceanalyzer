@@ -54,12 +54,12 @@ export const initializeFaceMesh = async () => {
  */
 export const startCamera = async () => {
   try {
-    // First try with ideal width/height (mobile will use what it can)
+    // Try with standard constraints first (works better on mobile)
     const constraints = {
       video: {
-        width: { ideal: 1280, min: 320 },
-        height: { ideal: 720, min: 240 },
         facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
       },
       audio: false,
     };
@@ -67,17 +67,28 @@ export const startCamera = async () => {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     return stream;
   } catch (error) {
-    console.error('Error accessing camera:', error);
+    console.error('Error with standard constraints:', error);
     
-    // Fallback: try with simpler constraints
+    // Fallback 1: Try with minimal constraints
     try {
       const fallbackStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user' },
         audio: false,
       });
+      console.log('Using fallback constraints');
       return fallbackStream;
     } catch (fallbackError) {
-      throw new Error('Camera access denied. Please grant camera permissions and try again.');
+      // Fallback 2: Try environment camera (some mobile devices need this)
+      try {
+        const envStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'user' } },
+          audio: false,
+        });
+        console.log('Using environment camera');
+        return envStream;
+      } catch (envError) {
+        throw new Error('Camera access denied. Please grant camera permissions in settings and try again.');
+      }
     }
   }
 };
