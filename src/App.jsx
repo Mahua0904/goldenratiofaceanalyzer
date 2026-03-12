@@ -99,10 +99,7 @@ const App = () => {
       const landmarks = await getLandmarks(videoElement);
 
       if (landmarks && landmarks.length > 0) {
-        // Clear canvas
-        vizClearCanvas(canvasContext);
-
-        // Draw visualization
+        // Draw visualization (video frame is already drawn in Camera component)
         vizDrawLandmarks(canvasContext, landmarks);
         if (showMeasurements) {
           vizDrawMeasurementLines(canvasContext, landmarks);
@@ -115,8 +112,7 @@ const App = () => {
           setAnalysisData(proportions);
         }
       } else {
-        // No face detected, just clear the canvas
-        vizClearCanvas(canvasContext);
+        // No face detected, video frame remains visible
       }
     } catch (err) {
       console.error('Error processing frame:', err);

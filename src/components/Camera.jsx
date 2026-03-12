@@ -52,7 +52,7 @@ const Camera = ({
   }, [isDetecting, onFrameReady]);
 
   return (
-    <div className="relative w-full h-full bg-black/50 rounded-lg overflow-hidden shadow-2xl">
+    <div className="relative w-full h-full bg-black rounded-lg overflow-hidden shadow-2xl">
       <video
         ref={videoRef}
         className="w-full h-full object-cover hidden"
@@ -62,7 +62,7 @@ const Camera = ({
       />
       <canvas
         ref={canvasRef}
-        className="w-full h-full object-cover backdrop-blur-sm"
+        className="w-full h-full object-cover"
         width={canvasSize.width}
         height={canvasSize.height}
       />
